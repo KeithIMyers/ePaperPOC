@@ -1,0 +1,57 @@
+#!/bin/bash
+TIME=$(env TZ=America/New_York date +"%_I:%M %p" --date='1 minute')
+DATE=$(env TZ=America/New_York date +"%b %d" --date='1 minute')
+DAY=$(env TZ=America/New_York date +"%A" --date='1 minute')
+WEATHERDATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?zip=33162,US&units=imperial&appid=APIKEY")
+echo $WEATHERDATA
+TEMPRATURE=$(echo $WEATHERDATA | jq '.main.temp')
+MINTEMP=$(echo $WEATHERDATA | jq '.main.temp_min')
+MAXTEMP=$(echo $WEATHERDATA | jq '.main.temp_max')
+
+#ONLY IF YOU HAVE A NETGEAR ROUTER - INSTALL "pynetgear" via pip3
+NETGEARBW=$(python3 -m pynetgear --user "admin" --password "" --host "192.168.1.1" --no-ssl traffic_meter)
+NETGEARDEVICES=$(python3 -m pynetgear --user "admin" --password "" --host "192.168.1.1" --no-ssl attached_devices)
+NUMBEROFDEVICES=$(echo $NETGEARDEVICES | jq length)
+MONTHUPLOAD=$(echo $NETGEARBW | jq '.NewMonthUpload')
+MONTHDOWNLOAD=$(echo $NETGEARBW | jq '.NewMonthDownload')
+echo $NETGEARBW
+echo $MONTHDOWNLOAD
+UPLOADMB=$(echo $MONTHUPLOAD | awk '{print $2}' | rev | cut -c2- | rev)
+#UPLOADMB=$(echo $MONTHUPLOAD | awk '{print $2}')
+DOWNLOADMB=$(echo $MONTHDOWNLOAD | awk '{print $2}' | rev | cut -c2- | rev)
+
+UPLOADGB=$(echo "$UPLOADMB / 1024" | bc)
+DOWNLOADGB=$(echo "$DOWNLOADMB / 1024" | bc)
+
+#REPLACE WITH YOUR UNRAID IP 
+NASDISK=$(ssh root@192.168.1.2 df -h | grep "/mnt/user0")
+TOTALDISK=$(echo $NASDISK | awk '{print $2}')
+USEDDISK=$(echo $NASDISK | awk '{print $3}')
+DISKUSE=$(echo $NASDISK | awk '{print $5}')
+#UPLOADGB=$(`expr 1 + 1`)
+echo $UPLOADGB
+#WEATHER=$(echo $WEATHERDATA | jq '.weather.description')
+echo $TIME
+echo $DATE
+echo $TEMPRATURE
+#convert ../pic/blank-b.bmp -gravity Center  -pointsize 50 -annotate 0 "$TIME" ../pic/7in5b-b.bmp
+convert ../pic/blank-b.bmp -gravity Center  -pointsize 60 -draw "text 30,-140 '$TIME'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 26 -draw "text 245,-165 '$DAY'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 24 -draw "text 235,-145 '$DATE'" ../pic/7in5b-b.bmp
+#convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 18 -draw "text 220,-145 '$WEATHER'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 20 -draw "text 200,-105 '$TEMPRATURE°'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 12 -draw "text 275,-105 '($MINTEMP°/$MAXTEMP°)'" ../pic/7in5b-b.bmp
+
+#ROUTER
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 14 -draw "text 245,-5 'NIGHTHAWK RAX80'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 12 -draw "text 260,40 'BWUSE : ($UPLOADGB/$DOWNLOADGB)'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 12 -draw "text 255,30 'DEVICES : $NUMBEROFDEVICES'" ../pic/7in5b-b.bmp
+
+#NAS
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 14 -draw "text 245,60 'HVM1-NAS'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 12 -draw "text 255,90 'DISKS: $USEDDISK/$TOTALDISK'" ../pic/7in5b-b.bmp
+convert ../pic/7in5b-b.bmp -gravity Center  -pointsize 12 -draw "text 255,100 'USE: $DISKUSE'" ../pic/7in5b-b.bmp
+
+
+
+python3 epd_7in5bc_test.py 
